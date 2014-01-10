@@ -11,9 +11,9 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace Scroll
 {
-    public partial class MainWindow : IGazeUpdateListener
-    {
-        #region Variables
+	public partial class MainWindow : IGazeUpdateListener
+	{
+		#region Variables
 
 		private const double SpeedBoost = 15.0;
 		private const double ActiveScrollArea = 0.25; // 25% top and bottom
@@ -21,12 +21,12 @@ namespace Scroll
 		private ImageButton _latestSelection;
 		private readonly double _dpiScale;
 
-        #endregion
+		#endregion
 
-        #region Constructor
+		#region Constructor
 
-        public MainWindow()
-        {
+		public MainWindow()
+		{
 			var connectedOk = true;
 			GazeManager.Instance.Activate(1, GazeManager.ClientMode.Push);
 			GazeManager.Instance.AddGazeListener(this);
@@ -46,7 +46,7 @@ namespace Scroll
 				return;
 			}
 
-            InitializeComponent();
+			InitializeComponent();
 			_dpiScale = CalcDpiScale();
 
 			// Hide all from start
@@ -62,15 +62,15 @@ namespace Scroll
 			Loaded += (sender, args) =>
 				{
 					if (Screen.PrimaryScreen.Bounds.Width > MaxImageWidth)
-						WebImage.Width = MaxImageWidth * _dpiScale;
+						WebImage.Width = MaxImageWidth*_dpiScale;
 					else
-						WebImage.Width = Screen.PrimaryScreen.Bounds.Width * _dpiScale;
-					
+						WebImage.Width = Screen.PrimaryScreen.Bounds.Width*_dpiScale;
+
 					ExecuteSelectedButton("newyorktimes");
 				};
-        }
+		}
 
-        #endregion
+		#endregion
 
 		#region Public methods
 
@@ -84,41 +84,41 @@ namespace Scroll
 
 		public void OnGazeUpdate(GazeData gazeData)
 		{
-			var x = (int)Math.Round(gazeData.SmoothedCoordinates.X, 0);
-			var y = (int)Math.Round(gazeData.SmoothedCoordinates.Y, 0);
+			var x = (int) Math.Round(gazeData.SmoothedCoordinates.X, 0);
+			var y = (int) Math.Round(gazeData.SmoothedCoordinates.Y, 0);
 			if (x == 0 & y == 0) return;
 			// Invoke thread
 			Dispatcher.BeginInvoke(new Action(() => UpdateUI(x, y)));
 		}
 
 		#endregion
-		 
+
 		#region Private methods
 
-        private void TapDown(object sender, MouseButtonEventArgs e)
-        {
-            PanelsVisibility(Visibility.Visible);
-        }
+		private void TapDown(object sender, MouseButtonEventArgs e)
+		{
+			PanelsVisibility(Visibility.Visible);
+		}
 
-        private void TapUp(object sender, MouseButtonEventArgs e)
-        {
+		private void TapUp(object sender, MouseButtonEventArgs e)
+		{
 			// Hide panlel and exe button click if needed
-            PanelsVisibility(Visibility.Collapsed);
+			PanelsVisibility(Visibility.Collapsed);
 			var selectedButton = _latestSelection;
-            if(selectedButton != null)
-            {
-	            ExecuteSelectedButton(selectedButton.Name);
-            }
-        }
+			if (selectedButton != null)
+			{
+				ExecuteSelectedButton(selectedButton.Name);
+			}
+		}
 
-        private void ScrollWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
+		private void ScrollWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+		{
 			if (e.Key == Key.Escape)
-                Close();
-        }
+				Close();
+		}
 
 		private void UpdateUI(int x, int y)
-	    {
+		{
 			if (GridTop.Visibility == Visibility.Collapsed)
 			{
 				DoScroll(x, y);
@@ -127,7 +127,7 @@ namespace Scroll
 			{
 				DoButtonCheck(x, y);
 			}
-	    }
+		}
 
 		private void DoScroll(int x, int y)
 		{
@@ -137,20 +137,20 @@ namespace Scroll
 			// Exponential scrolling based on distance to either top or bottom
 			var h = Screen.PrimaryScreen.Bounds.Height;
 			var xExp = 0.0;
-			var newVar = h * ActiveScrollArea;
+			var newVar = h*ActiveScrollArea;
 			var doScroll = false;
 			var dir = 0;
 			if (y > h - newVar)
 			{
 				dir = -1;
 				doScroll = true;
-				xExp = 1 - ((h - y) / newVar);
+				xExp = 1 - ((h - y)/newVar);
 			}
 			else if (y < newVar)
 			{
 				dir = 1;
 				doScroll = true;
-				xExp = 1 - (y / newVar);
+				xExp = 1 - (y/newVar);
 			}
 			if (!doScroll) return;
 			var scrollLevel = (Math.Exp(-xExp*-xExp)*dir*SpeedBoost) - (dir*SpeedBoost);
@@ -194,41 +194,41 @@ namespace Scroll
 		private bool HitTest(ImageButton control, Point gazePt)
 		{
 			var gridPt = control.PointToScreen(new Point(0, 0));
-			return gazePt.X > gridPt.X && gazePt.X < gridPt.X + control.ActualWidth / _dpiScale && 
-				gazePt.Y > gridPt.Y && gazePt.Y < gridPt.Y + control.ActualHeight / _dpiScale;
+			return gazePt.X > gridPt.X && gazePt.X < gridPt.X + control.ActualWidth/_dpiScale &&
+			       gazePt.Y > gridPt.Y && gazePt.Y < gridPt.Y + control.ActualHeight/_dpiScale;
 		}
 
 		private void ExecuteSelectedButton(string selectedButtonName)
-        {
+		{
 			if (selectedButtonName == null) return;
 
 			WebImageScroll.ScrollToVerticalOffset(0); // reset scroll
 			switch (selectedButtonName)
-            {
+			{
 				case "newyorktimes":
-                    WebImage.Source = new BitmapImage(new Uri("Graphics/newyorktimes.jpg", UriKind.RelativeOrAbsolute));
-                    break;
+					WebImage.Source = new BitmapImage(new Uri("Graphics/newyorktimes.jpg", UriKind.RelativeOrAbsolute));
+					break;
 				case "techcrunch":
-                    WebImage.Source = new BitmapImage(new Uri("Graphics/techcrunch.jpg", UriKind.RelativeOrAbsolute));
-                    break;
+					WebImage.Source = new BitmapImage(new Uri("Graphics/techcrunch.jpg", UriKind.RelativeOrAbsolute));
+					break;
 				case "tumblr":
 					WebImage.Source = new BitmapImage(new Uri("Graphics/tumblr.jpg", UriKind.RelativeOrAbsolute));
-                    break;
+					break;
 				case "note":
-                    WebImage.Source = new BitmapImage(new Uri("Graphics/note.jpg", UriKind.RelativeOrAbsolute));
-                    break;
+					WebImage.Source = new BitmapImage(new Uri("Graphics/note.jpg", UriKind.RelativeOrAbsolute));
+					break;
 				case "exit":
-                    Close();
-                    break;
-            }
-        }
+					Close();
+					break;
+			}
+		}
 
-        private void PanelsVisibility(Visibility visibility)
-        {
-            GridTop.Visibility = visibility;
-        }
-     
-        private static void CleanUp()
+		private void PanelsVisibility(Visibility visibility)
+		{
+			GridTop.Visibility = visibility;
+		}
+
+		private static void CleanUp()
 		{
 			GazeManager.Instance.Deactivate();
 		}
@@ -241,7 +241,7 @@ namespace Scroll
 
 		private static double CalcDpiScale()
 		{
-			return 96.0 / GetSystemDpi().X;
+			return 96.0/GetSystemDpi().X;
 		}
 
 		#endregion

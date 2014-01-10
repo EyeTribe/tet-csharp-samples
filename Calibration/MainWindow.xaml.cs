@@ -49,7 +49,7 @@ namespace TETBasicSample
 			Utility.Instance.RecordingScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
 
 			//Initialize and start calibration
-            CalibrationRunner calRunner = new CalibrationRunner();
+			CalibrationRunner calRunner = new CalibrationRunner();
 			var isCalibrated = calRunner.Start();
 
 			if (!isCalibrated)
