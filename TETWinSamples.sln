@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Calibration", "Calibration\Calibration.csproj", "{C6D4DFEB-1D02-4719-8E98-C95E44C86991}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CalibrationSample", "Calibration\CalibrationSample.csproj", "{C6D4DFEB-1D02-4719-8E98-C95E44C86991}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scroll", "Scroll\Scroll.csproj", "{7B698B00-8697-419A-B884-95E84A7E0FB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TETControls", "TETControls\TETControls.csproj", "{C93B12C7-9872-47A3-A2DB-D92623476FE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,6 +21,10 @@ Global
 		{7B698B00-8697-419A-B884-95E84A7E0FB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B698B00-8697-419A-B884-95E84A7E0FB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B698B00-8697-419A-B884-95E84A7E0FB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C93B12C7-9872-47A3-A2DB-D92623476FE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C93B12C7-9872-47A3-A2DB-D92623476FE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C93B12C7-9872-47A3-A2DB-D92623476FE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C93B12C7-9872-47A3-A2DB-D92623476FE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

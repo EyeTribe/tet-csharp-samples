@@ -2,8 +2,10 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TETCSharpClient;
 using TETCSharpClient.Data;
@@ -11,15 +13,20 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace Scroll
 {
-	public partial class MainWindow : IGazeUpdateListener
+	public partial class MainWindow : IGazeListener
 	{
 		#region Variables
 
-		private const double SpeedBoost = 15.0;
-		private const double ActiveScrollArea = 0.25; // 25% top and bottom
-		private const int MaxImageWidth = 1600;
-		private ImageButton _latestSelection;
-		private readonly double _dpiScale;
+		private const double SPEED_BOOST = 20.0;
+		private const double ACTIVE_SCROLL_AREA = 0.25; // 25% top and bottom
+		private const int MAX_IMAGE_WIDTH = 1600;
+		private ImageButton latestSelection;
+		private readonly double dpiScale;
+		private Matrix transfrm;
+		private readonly Timer scrollTimer;
+		private double scrollLevel;
+		private bool canScroll;
+		enum Direction { Up = -1, Down = 1 }
 
 		#endregion
 
@@ -28,11 +35,11 @@ namespace Scroll
 		public MainWindow()
 		{
 			var connectedOk = true;
-			GazeManager.Instance.Activate(1, GazeManager.ClientMode.Push);
+			GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
 			GazeManager.Instance.AddGazeListener(this);
 			if (!GazeManager.Instance.IsConnected)
 			{
-				Dispatcher.BeginInvoke(new Action(() => MessageBox.Show("EyeTracking Server not started")));
+				Dispatcher.BeginInvoke(new Action(() => MessageBox.Show("EyeTribe Server has not been started")));
 				connectedOk = false;
 			}
 			else if (!GazeManager.Instance.IsCalibrated)
@@ -47,7 +54,7 @@ namespace Scroll
 			}
 
 			InitializeComponent();
-			_dpiScale = CalcDpiScale();
+			dpiScale = CalcDpiScale();
 
 			// Hide all from start
 			PanelsVisibility(Visibility.Collapsed);
@@ -59,12 +66,19 @@ namespace Scroll
 			// Listen for keys
 			KeyDown += ScrollWindowKeyDown;
 
+			scrollTimer = new Timer {Interval = 30, Enabled = true};
+			scrollTimer.Tick += ScrollTimerTick;
+
 			Loaded += (sender, args) =>
 				{
-					if (Screen.PrimaryScreen.Bounds.Width > MaxImageWidth)
-						WebImage.Width = MaxImageWidth*_dpiScale;
+					if (Screen.PrimaryScreen.Bounds.Width > MAX_IMAGE_WIDTH)
+						WebImage.Width = MAX_IMAGE_WIDTH*dpiScale;
 					else
-						WebImage.Width = Screen.PrimaryScreen.Bounds.Width*_dpiScale;
+						WebImage.Width = Screen.PrimaryScreen.Bounds.Width*dpiScale;
+
+					// Transformation matrix that accomodate for the DPI settings
+					var presentationSource = PresentationSource.FromVisual(this);
+					transfrm = presentationSource.CompositionTarget.TransformFromDevice;
 
 					ExecuteSelectedButton("newyorktimes");
 				};
@@ -73,14 +87,6 @@ namespace Scroll
 		#endregion
 
 		#region Public methods
-
-		public void OnScreenIndexChanged(int number)
-		{
-		}
-
-		public void OnCalibrationStateChanged(bool val)
-		{
-		}
 
 		public void OnGazeUpdate(GazeData gazeData)
 		{
@@ -95,6 +101,13 @@ namespace Scroll
 
 		#region Private methods
 
+		private void ScrollTimerTick(object sender, EventArgs e)
+		{
+			if (!canScroll) return;
+			WebImageScroll.ScrollToVerticalOffset(WebImageScroll.VerticalOffset - scrollLevel);	
+			canScroll = false;
+		}
+
 		private void TapDown(object sender, MouseButtonEventArgs e)
 		{
 			PanelsVisibility(Visibility.Visible);
@@ -104,7 +117,7 @@ namespace Scroll
 		{
 			// Hide panlel and exe button click if needed
 			PanelsVisibility(Visibility.Collapsed);
-			var selectedButton = _latestSelection;
+			var selectedButton = latestSelection;
 			if (selectedButton != null)
 			{
 				ExecuteSelectedButton(selectedButton.Name);
@@ -119,6 +132,15 @@ namespace Scroll
 
 		private void UpdateUI(int x, int y)
 		{
+			// Unhide the GazePointer if you want to see your gaze point
+			if (GazePointer.Visibility == Visibility.Visible)
+			{
+				var relativePt = new Point(x, y);
+				relativePt = transfrm.Transform(relativePt);
+				Canvas.SetLeft(GazePointer, relativePt.X - GazePointer.Width / 2);
+				Canvas.SetTop(GazePointer, relativePt.Y - GazePointer.Height / 2);
+			}
+
 			if (GridTop.Visibility == Visibility.Collapsed)
 			{
 				DoScroll(x, y);
@@ -134,27 +156,29 @@ namespace Scroll
 			WebImage.Focus();
 			ClampMouse(ref x, ref y);
 
-			// Exponential scrolling based on distance to either top or bottom
+			// Scrolling based on distance to either top or bottom
 			var h = Screen.PrimaryScreen.Bounds.Height;
 			var xExp = 0.0;
-			var newVar = h*ActiveScrollArea;
+			var newVar = h*ACTIVE_SCROLL_AREA;
 			var doScroll = false;
-			var dir = 0;
+			var direction = Direction.Up;
 			if (y > h - newVar)
 			{
-				dir = -1;
+				direction = Direction.Up;
 				doScroll = true;
 				xExp = 1 - ((h - y)/newVar);
 			}
 			else if (y < newVar)
 			{
-				dir = 1;
+				direction = Direction.Down;
 				doScroll = true;
 				xExp = 1 - (y/newVar);
 			}
 			if (!doScroll) return;
-			var scrollLevel = (Math.Exp(-xExp*-xExp)*dir*SpeedBoost) - (dir*SpeedBoost);
-			WebImageScroll.ScrollToVerticalOffset(WebImageScroll.VerticalOffset - scrollLevel);
+
+			// Sigmoid function multiplied with the scroll direction and a constant SPEED_BOOST
+			scrollLevel = (1 / (1 + Math.Exp((-10 * xExp) + 6))) * ((int)direction * SPEED_BOOST);
+			canScroll = true;
 		}
 
 		private static void ClampMouse(ref int x, ref int y)
@@ -176,6 +200,7 @@ namespace Scroll
 		private void DoButtonCheck(int x, int y)
 		{
 			var pt = new Point(x, y);
+			pt = transfrm.Transform(pt);
 			var foundCandidate = false;
 			foreach (var child in GridButtons.Children.Cast<ImageButton>())
 			{
@@ -183,19 +208,19 @@ namespace Scroll
 				child.IsChecked = isChecked;
 				if (!isChecked) continue;
 				foundCandidate = true;
-				_latestSelection = child;
+				latestSelection = child;
 			}
 			if (!foundCandidate)
 			{
-				_latestSelection = null;
+				latestSelection = null;
 			}
 		}
 
 		private bool HitTest(ImageButton control, Point gazePt)
 		{
-			var gridPt = control.PointToScreen(new Point(0, 0));
-			return gazePt.X > gridPt.X && gazePt.X < gridPt.X + control.ActualWidth/_dpiScale &&
-			       gazePt.Y > gridPt.Y && gazePt.Y < gridPt.Y + control.ActualHeight/_dpiScale;
+			var gridPt = transfrm.Transform(control.PointToScreen(new Point(0, 0)));
+			return gazePt.X > gridPt.X && gazePt.X < gridPt.X + control.ActualWidth &&
+				gazePt.Y > gridPt.Y && gazePt.Y < gridPt.Y + control.ActualHeight;
 		}
 
 		private void ExecuteSelectedButton(string selectedButtonName)

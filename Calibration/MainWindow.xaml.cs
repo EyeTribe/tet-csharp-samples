@@ -1,34 +1,34 @@
 ﻿using System;
 using System.Windows;
-using Calibration;
+using System.Windows.Forms;
+using TETControls.Calibration;
 using TETCSharpClient.Data;
-using TETWinControls;
-using TETWinControls.Calibration;
-using Screen = System.Windows.Forms.Screen;
+using TETControls;
 using System.Windows.Interop;
 using TETCSharpClient;
+using MessageBox = System.Windows.MessageBox;
 
 
-namespace TETBasicSample
+namespace Calibration
 {
 	public partial class MainWindow
 	{
-		private GazeDot _gazeDot;
-
 		public MainWindow()
 		{
 			// Create a client for the eye tracker
-			GazeManager.Instance.Activate(1, GazeManager.ClientMode.Push);
+			GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
 			InitializeComponent();
 
 			if (!GazeManager.Instance.IsConnected)
 			{
-				MessageBox.Show("Tracker is not started");
+				MessageBox.Show("EyeTribe Server has not been started");
 				Close();
 			}
 			else if (GazeManager.Instance.IsCalibrated)
 			{
-				ShowGaze();
+				// Get the latest successful calibration from the EyeTribe server
+				RatingText.Text = RatingFunction(GazeManager.Instance.LastCalibrationResult);
+				btnCalibrate.Content = "Re-Calibrate";
 			}
 		}
 
@@ -40,75 +40,45 @@ namespace TETBasicSample
 
 		private void Calibrate()
 		{
-			if (_gazeDot != null)
-			{
-				_gazeDot.Hide();
-			}
-
 			//Run the calibration on 'this' monitor
-			Utility.Instance.RecordingScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
+			var ActiveScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
+			
+			// Initialize and start the calibration
+			CalibrationRunner calRunner = new CalibrationRunner(ActiveScreen, ActiveScreen.Bounds.Size, 9);
 
-			//Initialize and start calibration
-			CalibrationRunner calRunner = new CalibrationRunner();
 			var isCalibrated = calRunner.Start();
+			if (!isCalibrated) return;
 
-			if (!isCalibrated)
-			{
-				return;
-			}
-
-			MagicRatingFunction(calRunner.GetLatestCalibrationResult());
-
-			ShowGaze();
-		}
-
-		private void ShowGaze()
-		{
-			if (_gazeDot == null)
-			{
-				_gazeDot = new GazeDot();
-			}
-			_gazeDot.Show();
+			// Show the rating of last accepted current calibration
+			RatingText.Text = RatingFunction(GazeManager.Instance.LastCalibrationResult);
 		}
 
 		private void WindowClosed(object sender, EventArgs e)
 		{
-			if (_gazeDot != null)
-			{
-				_gazeDot.Close();
-			}
 			GazeManager.Instance.Deactivate();
 		}
 
-		private void MagicRatingFunction(CalibrationResult calibrationResult)
+		public string RatingFunction(CalibrationResult result)
 		{
-			if (calibrationResult == null)
-			{
-				return;
-			}
-			var str = "";
-			var accuracy = calibrationResult.AverageErrorDegree;
+			var accuracy = result.AverageErrorDegree;
+
 			if (accuracy < 0.5)
 			{
-				str = "PERFECT";
+				return "Calibration Quality: PERFECT";
 			}
-			else if (accuracy < 0.7)
+			if (accuracy < 0.7)
 			{
-				str = "GOOD";
+				return "Calibration Quality: GOOD";
 			}
-			else if (accuracy < 1)
+			if (accuracy < 1)
 			{
-				str = "MODERATE";
+				return "Calibration Quality: MODERATE";
 			}
-			else if (accuracy < 1.5)
+			if (accuracy < 1.5)
 			{
-				str = "POOR";
+				return "Calibration Quality: POOR";
 			}
-			else
-			{
-				str = "REDO";
-			}
-			RatingText.Text = "CALIBRATION RESULT: " + str;
+			return "Calibration Quality: REDO";
 		}
 	}
 }
