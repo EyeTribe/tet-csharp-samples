@@ -68,7 +68,7 @@
                 <Scroll:ImageButton FocusVisualStyle="{x:Null}" Grid.Column="4" x:Name="exit" Icon="Graphics/exit.png" />
             </Grid>
         </Grid>
-        <Canvas>
+        <Canvas x:Name="canvas_overlay">
             <Ellipse x:Name="GazePointer" Width="10" Height="10" Fill="Blue" Visibility="Hidden"/>
         </Canvas>
     </Grid>

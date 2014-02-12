@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using TETCSharpClient.Data;
 
 
 namespace TETControls
@@ -11,20 +9,35 @@ namespace TETControls
     {
         #region Variabels 
 
+		private const float DPI_DEFAULT = 96f; // default system DIP setting
         private static Utility _instance;
         private Point sysDpi;
         private float scaleDpi;
-        private const int Logpixelsx = 88; // Used for GetDeviceCaps().
-        private const int Logpixelsy = 90; // Used for GetDeviceCaps().
 
         #endregion
 
-        #region Constructor
+		#region Enums
 
-        private Utility()
+		public enum DeviceCap
+		{
+			/// <summary>
+			/// Logical pixels inch in X
+			/// </summary>
+			LOGPIXELSX = 88,
+			/// <summary>
+			/// Logical pixels inch in Y
+			/// </summary>
+			LOGPIXELSY = 90
+		}  
+
+		#endregion
+
+		#region Constructor
+
+		private Utility()
         {
             sysDpi = GetSystemDpi();
-            ScaleDpi = 96f / sysDpi.X;
+			ScaleDpi = DPI_DEFAULT / sysDpi.X;
         }
 
         #endregion
@@ -54,15 +67,12 @@ namespace TETControls
 
         public static Point GetSystemDpi()
         {
-            Point result = new Point();
-            IntPtr hDc = GetDC(IntPtr.Zero);
-
-            result.X = GetDeviceCaps(hDc, Logpixelsx);
-            result.Y = GetDeviceCaps(hDc, Logpixelsy);
-
-            ReleaseDC(IntPtr.Zero, hDc);
-
-            return result;
+			Point result = new Point();
+			IntPtr hDc = GetDC(IntPtr.Zero);
+			result.X = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSX);
+			result.Y = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSY);
+			ReleaseDC(IntPtr.Zero, hDc);
+			return result;
         }
 
         #endregion

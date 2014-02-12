@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media;
+using System.Windows.Threading;
 using TETCSharpClient.Data;
 using TETCSharpClient;
 using Image = System.Windows.Controls.Image;
@@ -12,47 +13,53 @@ using Size = System.Windows.Size;
 
 namespace TETControls.TrackBox
 {
-    public partial class TrackBoxStatus : IGazeListener, ITrackerStateListener
+	public partial class TrackBoxStatus : IGazeListener, ITrackerStateListener
 	{
 		#region Structs
 
 		// trackbox struct
-		public struct TrackBoxObject
+		private struct TrackBoxObject
 		{
 			public PointF Left;
 			public PointF Right;
-			public int LeftValidity;
-			public int RightValidity;
+			public EyeCount LeftValidity;
+			public EyeCount RightValidity;
 		}
+		
+		#endregion
+
+		#region Enums
+
+		private enum EyeCount { Zero = 0, One, Two }
 
 		#endregion
 
 		#region Variables
 
+		private const int UI_UPDATE_FREQUENCY = 60; // Hz
 		private const int MAX_BAD_SAMPLES = 3;
 		private const int HISTORY_SIZE = 20;
 		private const float ACCEPTABLE_QUALITY = 0.2f;
 
-		private TrackBoxObject _latestGoodSample;
-		private double _angleLatest;
-		private double _normDistanceLatest;
-		private TrackBoxObject _current;
-		private int _badSuccessiveSamples;
-		private float _trackingQuality;
-		private Size _controlSize;
-		private double _eyeScale;
+		private readonly object Locker = new object();
+		private readonly Queue<TrackBoxObject> TrackBoxHistory = new Queue<TrackBoxObject>(HISTORY_SIZE);
+		private TrackBoxObject LatestGoodSample;
+		private TrackBoxObject CurrentTrackboxObj;
+		private double LatestAngle;
+		private double LatestNormalizedDistance;
+		private double EyeScale;
+		private float CurrentTrackingQuality;
+		private int BadSuccessiveSamples;
+		private Size ControlSize;
 
-		private readonly Queue<TrackBoxObject> _dataHistory = new Queue<TrackBoxObject>(HISTORY_SIZE);
-
-		private TransformGroup _leftTransGroup;
-		private RotateTransform _leftTransRot;
-		private TranslateTransform _leftTransTranslation;
-		private ScaleTransform _leftTransScale;
-
-		private TransformGroup _rightTransGroup;
-		private RotateTransform _rightTransRot;
-		private TranslateTransform _rightTransTranslation;
-		private ScaleTransform _rightTransScale;
+		private TransformGroup LeftTransGroup;
+		private RotateTransform LeftTransRotation;
+		private TranslateTransform LeftTransTranslation;
+		private ScaleTransform LeftTransScale;
+		private TransformGroup RightTransGroup;
+		private RotateTransform RightTransRotation;
+		private TranslateTransform RightTransTranslation;
+		private ScaleTransform RightTransScale;
 
 		#endregion
 
@@ -72,103 +79,160 @@ namespace TETControls.TrackBox
 
 		#endregion
 
-        #region Constructor
+		#region Constructor
 
 		public TrackBoxStatus()
 		{
 			InitializeComponent();
 
+			DispatcherTimer UIUpdateTimer = new DispatcherTimer();
+			UIUpdateTimer.Tick += UIUpdateTimerTick;
+			UIUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, 1000 / UI_UPDATE_FREQUENCY);
+			UIUpdateTimer.Start();
+
 			Loaded += (sender, args) =>
 			{
 				GazeManager.Instance.AddGazeListener(this);
-                GazeManager.Instance.AddTrackerStateListener(this);
+				GazeManager.Instance.AddTrackerStateListener(this);
 
 				var size = new Size(Width, Height);
 				if (double.IsNaN(size.Width))
 					size = new Size(ActualWidth, ActualHeight);
-				_controlSize = size;
+				ControlSize = size;
 
-				// normalize eyes and 'no-tracking image' - based on the designHeight of the user control
-				_eyeScale = _controlSize.Height / 1000;
-				status_no_tracking.Width = _controlSize.Height / 3;
-				status_no_tracking.Height = _controlSize.Height / 3;
+				// Normalize eyes and 'no-tracking image' - based on the designHeight of the user control
+				EyeScale = ControlSize.Height / 1000;
+				status_no_tracking.Width = ControlSize.Height / 3;
+				status_no_tracking.Height = ControlSize.Height / 3;
 
-				// initialize the transformation variables for left and right eye
-				_leftTransRot = new RotateTransform();
-				_leftTransTranslation = new TranslateTransform();
-				_leftTransScale = new ScaleTransform();
-				_leftTransGroup = new TransformGroup();
-				_leftTransGroup.Children.Add(_leftTransRot);
-				_leftTransGroup.Children.Add(_leftTransScale);
-				_leftTransGroup.Children.Add(_leftTransTranslation);
+				// Initialize the transformation variables for left and right eye
+				LeftTransRotation = new RotateTransform();
+				LeftTransTranslation = new TranslateTransform();
+				LeftTransScale = new ScaleTransform();
+				LeftTransGroup = new TransformGroup();
+				LeftTransGroup.Children.Add(LeftTransRotation);
+				LeftTransGroup.Children.Add(LeftTransScale);
+				LeftTransGroup.Children.Add(LeftTransTranslation);
 
-				_rightTransRot = new RotateTransform();
-				_rightTransTranslation = new TranslateTransform();
-				_rightTransScale = new ScaleTransform();
-				_rightTransGroup = new TransformGroup();
-				_rightTransGroup.Children.Add(_rightTransRot);
-				_rightTransGroup.Children.Add(_rightTransScale);
-				_rightTransGroup.Children.Add(_rightTransTranslation);
+				RightTransRotation = new RotateTransform();
+				RightTransTranslation = new TranslateTransform();
+				RightTransScale = new ScaleTransform();
+				RightTransGroup = new TransformGroup();
+				RightTransGroup.Children.Add(RightTransRotation);
+				RightTransGroup.Children.Add(RightTransScale);
+				RightTransGroup.Children.Add(RightTransTranslation);
 
-			    OnTrackerStateChanged(GazeManager.Instance.Trackerstate);
-
+				OnTrackerStateChanged(GazeManager.Instance.Trackerstate);
 			};
 		}
 
 		#endregion
 
-		#region Public
+		#region Public Methods
+
+		public void OnScreenStatesChanged(int screenIndex, int screenResolutionWidth, int screenResolutionHeight, float screenPhysicalWidth, float screenPhysicalHeight)
+		{ }
 
 		public void OnGazeUpdate(GazeData gazeData)
 		{
-			if (Dispatcher.CheckAccess() == false)
+			ProcessSample(gazeData);
+			AnalyzeSamples();
+		}
+
+		public void OnTrackerStateChanged(GazeManager.TrackerState trackerState)
+		{
+			if (labelDeviceConnected.Dispatcher.Thread != Thread.CurrentThread)
 			{
-				Dispatcher.BeginInvoke(new Action(() => OnGazeUpdate(gazeData)));
+				this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnTrackerStateChanged(trackerState)));
 				return;
 			}
 
-            if (gridContent.Visibility != Visibility.Visible)
-                return;
+			gridContent.Visibility = Visibility.Hidden;
 
-			ProcessSample(gazeData);
-			DoCurrentSampleQuality();
-			DoSamplesQuality();
-			DoEyes();
+			switch (trackerState)
+			{
+				case GazeManager.TrackerState.TRACKER_CONNECTED:
+					labelDeviceConnected.Content = "";
+					gridContent.Visibility = Visibility.Visible;
+					break;
+				case GazeManager.TrackerState.TRACKER_CONNECTED_NOUSB3:
+					labelDeviceConnected.Content = "Device connected to a USB2.0 port";
+					break;
+				case GazeManager.TrackerState.TRACKER_CONNECTED_BADFW:
+					labelDeviceConnected.Content = "A firmware updated is required.";
+					break;
+				case GazeManager.TrackerState.TRACKER_NOT_CONNECTED:
+					labelDeviceConnected.Content = "Device not connected.";
+					break;
+				case GazeManager.TrackerState.TRACKER_CONNECTED_NOSTREAM:
+					labelDeviceConnected.Content = "No data coming out of the sensor.";
+					break;
+			}
 		}
 
-        public void OnTrackerStateChanged(GazeManager.TrackerState trackerState)
-        {
-            if (labelDeviceConnected.Dispatcher.Thread != Thread.CurrentThread)
-            {
-                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnTrackerStateChanged(trackerState)));
-                return;
-            }
+		#endregion
 
-            gridContent.Visibility = Visibility.Hidden;
+		#region Private UI Methods
 
-            switch (trackerState)
-            {
-                case GazeManager.TrackerState.TRACKER_CONNECTED:
-                    labelDeviceConnected.Content = "";
-                    gridContent.Visibility = Visibility.Visible;
-                    break;
-                case GazeManager.TrackerState.TRACKER_CONNECTED_NOUSB3:
-                    labelDeviceConnected.Content = "Device connected to a USB2.0 port";
-                    break;
-                case GazeManager.TrackerState.TRACKER_CONNECTED_BADFW:
-                    labelDeviceConnected.Content = "A firmware updated is required.";
-                    break;
-                case GazeManager.TrackerState.TRACKER_NOT_CONNECTED:
-                    labelDeviceConnected.Content = "Device not connected.";
-                    break;
-                case GazeManager.TrackerState.TRACKER_CONNECTED_NOSTREAM:
-                    labelDeviceConnected.Content = "No data coming out of the sensor.";
-                    break;
-            }
-        }
-        
-        public void OnScreenStatesChanged(int screenIndex, int screenResolutionWidth, int screenResolutionHeight, float screenPhysicalWidth, float screenPhysicalHeight)
-        {}
+		private void UIUpdateTimerTick(object sender, EventArgs e)
+		{
+			if (gridContent.Visibility != Visibility.Visible)
+				return;
+
+			lock (Locker)
+			{
+				// Do background opacity
+				status_quality.Opacity = CurrentTrackingQuality;
+				status_quality_inverted.Opacity = 1f - CurrentTrackingQuality;
+
+				// Determine what should visible and update the eye positions if needed
+				if (DoVisibility())
+				{
+					UpdateEyes();
+				}
+			}
+		}
+
+		private bool DoVisibility()
+		{
+			if (CurrentTrackingQuality <= ACCEPTABLE_QUALITY)
+			{
+				status_no_tracking.Visibility = Visibility.Visible;
+				eye_left.Visibility = Visibility.Collapsed;
+				eye_right.Visibility = Visibility.Collapsed;
+				return false;
+			}
+			status_no_tracking.Visibility = Visibility.Collapsed;
+			return true;
+		}
+
+		private void UpdateEyes()
+		{
+			// Update each eye with their respective transformation group
+			UpdateEye(eye_left, CurrentTrackboxObj.Left, CurrentTrackboxObj.LeftValidity, LeftTransGroup);
+			UpdateEye(eye_right, CurrentTrackboxObj.Right, CurrentTrackboxObj.RightValidity, RightTransGroup);
+		}
+
+		private void UpdateEye(Image eye, PointF pos, EyeCount validity, TransformGroup transformation)
+		{
+			if (pos != PointF.Empty && validity <= EyeCount.Two)
+			{
+				eye.Visibility = Visibility.Visible;
+				var scale = EyeScale + DoEyeSizeDiff() * EyeScale;
+				var x = pos.X * ControlSize.Width;
+				var y = pos.Y * ControlSize.Height;
+				((RotateTransform)transformation.Children[0]).Angle = LatestAngle;
+				((ScaleTransform)transformation.Children[1]).ScaleX = scale;
+				((ScaleTransform)transformation.Children[1]).ScaleY = scale;
+				((TranslateTransform)transformation.Children[2]).X = x - (eye.ActualWidth) / 2;
+				((TranslateTransform)transformation.Children[2]).Y = y - (eye.ActualHeight) / 2;
+				eye.RenderTransform = transformation;
+			}
+			else
+			{
+				eye.Visibility = Visibility.Collapsed;
+			}
+		}
 
 		#endregion
 
@@ -195,82 +259,46 @@ namespace TETControls.TrackBox
 			}
 
 			// create a new trackbox sample and enqueue it
-			_current = new TrackBoxObject
+			CurrentTrackboxObj = new TrackBoxObject
 			{
 				Left = left,
 				Right = right,
-				LeftValidity = left != PointF.Empty ? 0 : 1,
-				RightValidity = right != PointF.Empty ? 0 : 1
+				LeftValidity = left != PointF.Empty ? EyeCount.One : EyeCount.Zero,
+				RightValidity = right != PointF.Empty ? EyeCount.One : EyeCount.Zero
 			};
-			EnqueueTrackBoxObject(_current);
+			EnqueueTrackBoxObject(CurrentTrackboxObj);
 		}
 
-		private void DoCurrentSampleQuality()
+		private void AnalyzeSamples()
 		{
-			_trackingQuality = GetStatus();
-		}
-
-		private void DoSamplesQuality()
-		{
-			var quality = GetQuality(_current);
-			if (quality == 1 || quality == 2)
+			lock (Locker)
 			{
-				_badSuccessiveSamples = 0;
-				_latestGoodSample = _current;
-
-				// calculate eye angle if both eyes are visible
-				if (quality == 2)
+				CurrentTrackingQuality = GetStatus();
+				var quality = VisibleEyesCount(CurrentTrackboxObj);
+				if (quality == EyeCount.One || quality == EyeCount.Two)
 				{
-					_normDistanceLatest = Math.Sqrt(
-						Math.Pow(_current.Right.X - _current.Left.X, 2) +
-						Math.Pow(_current.Right.Y - _current.Left.Y, 2));
-					_angleLatest = ((180 / Math.PI *
-						Math.Atan2((_current.Right.Y - _current.Left.Y) * _controlSize.Height, (_current.Right.X - _current.Left.X) * _controlSize.Width)));
+					BadSuccessiveSamples = 0;
+					LatestGoodSample = CurrentTrackboxObj;
+
+					// calculate eye angle if both eyes are visible
+					if (quality == EyeCount.Two)
+					{
+						var dx = CurrentTrackboxObj.Right.X - CurrentTrackboxObj.Left.X;
+						var dy = CurrentTrackboxObj.Right.Y - CurrentTrackboxObj.Left.Y;
+						LatestNormalizedDistance = Math.Sqrt(Math.Pow(dx, 2) + Math.Pow(dy, 2));
+						LatestAngle = ((180/Math.PI* Math.Atan2((dy)*ControlSize.Height,(dx)*ControlSize.Width)));
+					}
+				}
+				else
+				{
+					// we are forgiving with a couple of bad samples
+					BadSuccessiveSamples++;
+					if (BadSuccessiveSamples < MAX_BAD_SAMPLES)
+					{
+						CurrentTrackboxObj = LatestGoodSample;
+					}
 				}
 			}
-			else
-			{
-				// we are forgiving with a couple of bad samples
-				_badSuccessiveSamples++;
-				if (_badSuccessiveSamples < MAX_BAD_SAMPLES)
-				{
-					_current = _latestGoodSample;
-				}
-			}
-		}
-
-		private void DoEyes()
-		{
-			DoBackground();
-			if (DoVisibility())
-			{
-				UpdateEyes();
-			}
-		}
-
-		private void DoBackground()
-		{
-			status_quality.Opacity = _trackingQuality;
-		}
-
-		private bool DoVisibility()
-		{
-			if (_trackingQuality <= ACCEPTABLE_QUALITY)
-			{
-				status_no_tracking.Visibility = Visibility.Visible;
-				eye_left.Visibility = Visibility.Collapsed;
-				eye_right.Visibility = Visibility.Collapsed;
-				return false;
-			}
-			status_no_tracking.Visibility = Visibility.Collapsed;
-			return true;
-		}
-
-		private void UpdateEyes()
-		{
-			// Update each eye with their respective transformation group
-			UpdateEye(eye_left, _current.Left, _current.LeftValidity, _leftTransGroup);
-			UpdateEye(eye_right, _current.Right, _current.RightValidity, _rightTransGroup);
 		}
 
 		private double DoEyeSizeDiff()
@@ -278,79 +306,47 @@ namespace TETControls.TrackBox
 			// Linear scale - normalised with the overall eye scale
 			const double b = 0.15; // magic number (gestimated normalized distance between eyes)
 			const double a = 1;
-			return ((_normDistanceLatest - b) / b) * a;
-		}
-
-		private void UpdateEye(Image eye, PointF pos, int validity, TransformGroup transformation)
-		{
-			if (pos != PointF.Empty && validity <= 2)
-			{
-				eye.Visibility = Visibility.Visible;
-				var scale = _eyeScale + DoEyeSizeDiff() * _eyeScale;
-				var x = pos.X * _controlSize.Width;
-				var y = pos.Y * _controlSize.Height;
-
-				((RotateTransform)transformation.Children[0]).Angle = _angleLatest;
-				((ScaleTransform)transformation.Children[1]).ScaleX = scale;
-				((ScaleTransform)transformation.Children[1]).ScaleY = scale;
-				((TranslateTransform)transformation.Children[2]).X = x - (eye.ActualWidth) / 2;
-				((TranslateTransform)transformation.Children[2]).Y = y - (eye.ActualHeight) / 2;
-				eye.RenderTransform = transformation;
-			}
-			else
-			{
-				eye.Visibility = Visibility.Collapsed;
-			}
+			return ((LatestNormalizedDistance - b) / b) * a;
 		}
 
 		private void EnqueueTrackBoxObject(TrackBoxObject tbo)
 		{
-			lock (_dataHistory)
+			TrackBoxHistory.Enqueue(tbo);
+			while (TrackBoxHistory.Count > HISTORY_SIZE)
 			{
-				_dataHistory.Enqueue(tbo);
-
-				while (_dataHistory.Count > HISTORY_SIZE)
-				{
-					_dataHistory.Dequeue();
-				}
+				TrackBoxHistory.Dequeue();
 			}
 		}
 
 		private float GetStatus()
 		{
+			// Get the overall tracking quality from our TrackBoxHistory
 			var totalQuality = 0;
 			var count = 0;
-			lock (_dataHistory)
+			foreach (var item in TrackBoxHistory)
 			{
-				foreach (var item in _dataHistory)
-				{
-					totalQuality += GetQuality(item);
-					count++;
-				}
+				totalQuality += (int)VisibleEyesCount(item);
+				count++;
 			}
-			return (totalQuality == 0 ? totalQuality : totalQuality / (2F * count));
+			return (totalQuality == (int)EyeCount.Zero ? totalQuality : totalQuality / ((float)EyeCount.Two * count));
 		}
 
-		private static int GetQuality(TrackBoxObject tbi)
+		private static EyeCount VisibleEyesCount(TrackBoxObject tbi)
 		{
 			// Get the quality of a single frame based on eye count
-			var quality = 0;
-			if (tbi.LeftValidity == 1 && tbi.RightValidity == 1)
-			{   // both eyes are gone
-				quality += 0;
+			if (tbi.LeftValidity == EyeCount.Zero && tbi.RightValidity == EyeCount.Zero)
+			{
+				// both eyes are gone
+				return EyeCount.Zero;
 			}
-			else if (tbi.LeftValidity == 0 && tbi.RightValidity == 0)
-			{   // best case
-				quality += 2;
+			if (tbi.LeftValidity == EyeCount.One && tbi.RightValidity == EyeCount.One)
+			{
+				// two eyes are found
+				return EyeCount.Two;
 			}
-			else
-			{   // only one eye is showing
-				quality += 1;
-			}
-			return quality;
+			// only left or right eye is showing
+			return EyeCount.One;
 		}
-
 		#endregion
-
-    }
+	}
 }

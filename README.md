@@ -44,6 +44,16 @@ To build, open solution file in compliant [Visual Studio](http://www.visualstudi
 Changelog
 ----
 
+0.9.27 (2014-02-12)
+- Restyled and documented hard-coded values for device caps
+- De-normalized calibration targets in calibration runner
+- Setting opacity for the red background image when updating the background in TrackBox
+- Fixed the halo artifacts in the gradient background for a large track box
+- Reduced image size and memory consumption by using significantly smaller background images
+- Calculations are kept in the background thread and UI elements are currently updated with a dispatcher timer running at 60 Hz
+- Employing safe read write of shared variables between worker thread and UI thread in the TrackBox
+- Introduced EyeCount enum in the calibration runner for improved readability
+
 0.9.26 (2014-01-30)
 - TETControls has been merged into this repository.
 - The Utility class has been pruned

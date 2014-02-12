@@ -9,7 +9,6 @@ using TETCSharpClient;
 using TETCSharpClient.Data;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using MessageBox = System.Windows.MessageBox;
-using Point = System.Drawing.Point;
 using Size = System.Drawing.Size;
 
 namespace TETControls.Calibration
@@ -191,8 +190,7 @@ namespace TETControls.Calibration
 				{
 					if (calPoint.State == CalibrationPoint.STATE_RESAMPLE || calPoint.State == CalibrationPoint.STATE_NO_DATA)
 					{
-						calibrationPoints.Enqueue(new Point2D(calPoint.Coordinates.X/Screen.Bounds.Width,
-						                                      calPoint.Coordinates.Y/Screen.Bounds.Height));
+						calibrationPoints.Enqueue(new Point2D(calPoint.Coordinates.X, calPoint.Coordinates.Y));
 					}
 				}
 
@@ -257,13 +255,8 @@ namespace TETControls.Calibration
                     timerLatency.Tick += delegate
                     {
                         timerLatency.Stop();
-
-                        // Convert normalized point to absolute screen point
-                        var gp = CurrentPoint * new Point2D(Screen.Bounds.Width, Screen.Bounds.Height);
-                        var realPoint = new Point((int)Math.Round(gp.X), (int)Math.Round(gp.Y));
-
                         // Signal tracker server that a point is starting, do the shrink animation and start timerRecording 
-                        GazeManager.Instance.CalibrationPointStart(realPoint.X, realPoint.Y);
+                        GazeManager.Instance.CalibrationPointStart((int)CurrentPoint.X, (int)CurrentPoint.Y);
                         calibrationWin.AnimateCalibrationPoint();
                         timerRecording.Start();
                     };
@@ -349,33 +342,8 @@ namespace TETControls.Calibration
                 scaleW = CalibrationAreaSize.Width / (double)size.Width;
 				scaleH = CalibrationAreaSize.Height / (double)size.Height;
 
-                switch (VerticalAlignment)
-                {
-                    case VerticalAlignment.Center:
-                    case VerticalAlignment.Stretch: // center
-						offsetY = ((size.Height - CalibrationAreaSize.Height) / 2d) / (double)size.Height;
-                        break;
-                    case VerticalAlignment.Bottom:
-						offsetY = (size.Height - CalibrationAreaSize.Height) / (double)size.Height;
-                        break;
-                    case VerticalAlignment.Top:
-                        // default value 
-                        break;
-                }
-
-                switch (HorizontalAlignment)
-                {
-                    case HorizontalAlignment.Center:
-                    case HorizontalAlignment.Stretch: // center
-						offsetX = ((size.Width - CalibrationAreaSize.Width) / 2d) / (double)size.Width;
-                        break;
-                    case HorizontalAlignment.Right:
-						offsetX = (size.Width - CalibrationAreaSize.Width) / (double)size.Width;
-                        break;
-                    case HorizontalAlignment.Left:
-                        // default value 
-                        break;
-                }
+				offsetX = GetHorizontalAlignmentOffset();
+	            offsetY = GetVerticalAlignmentOffset();
             }
 
             // add some padding 
@@ -413,7 +381,13 @@ namespace TETControls.Calibration
             foreach (int number in order)
                 calibrationPoints.Enqueue((Point2D)points[number]);
 
-            return calibrationPoints;
+			// De-normalize points to fit the current screen
+			foreach(var point in calibrationPoints)
+			{
+				point.X *= Screen.Bounds.Width;
+				point.Y *= Screen.Bounds.Height;
+			}
+	        return calibrationPoints;
         }
 
         public static double Lerp(double value1, double value2, double amount)
@@ -434,8 +408,46 @@ namespace TETControls.Calibration
             }
         }
 
-        #endregion
+		private double GetVerticalAlignmentOffset()
+		{
+			double offsetY = 0.0;
+			switch (VerticalAlignment)
+			{
+				case VerticalAlignment.Center:
+				case VerticalAlignment.Stretch: // center
+					offsetY = ((Screen.Bounds.Size.Height - CalibrationAreaSize.Height)/2d)/(double)Screen.Bounds.Size.Height;
+					break;
+				case VerticalAlignment.Bottom:
+					offsetY = (Screen.Bounds.Size.Height - CalibrationAreaSize.Height)/(double)Screen.Bounds.Size.Height;
+					break;
+				case VerticalAlignment.Top:
+					offsetY = 0.0;
+					break;
+			}
+			return offsetY;
+		}
 
-        #endregion
-    }
+		private double GetHorizontalAlignmentOffset()
+		{
+			double offsetX = 0.0;
+			switch (HorizontalAlignment)
+			{
+				case HorizontalAlignment.Center:
+				case HorizontalAlignment.Stretch: // center
+					offsetX = ((Screen.Bounds.Size.Width - CalibrationAreaSize.Width) / 2d) /(double)Screen.Bounds.Size.Width;
+					break;
+				case HorizontalAlignment.Right:
+					offsetX = (Screen.Bounds.Size.Width - CalibrationAreaSize.Width)/(double)Screen.Bounds.Size.Width;
+					break;
+				case HorizontalAlignment.Left:
+					offsetX = 0.0;
+					break;
+			}
+			return offsetX;
+		}
+
+		#endregion
+
+		#endregion
+	}
 }

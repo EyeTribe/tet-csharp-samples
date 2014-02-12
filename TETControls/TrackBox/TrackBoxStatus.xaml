@@ -11,8 +11,8 @@
         
         <Grid x:Name="gridContent">
             <Grid x:Name="GridImages">
-                <Image Source="GFX/gradient_red_2048.png" Visibility="Visible" Stretch="Fill" />
-                <Image x:Name="status_quality" Source="GFX/gradient_green_2048.png" Visibility="Visible" Stretch="Fill" Opacity="0" />
+                <Image x:Name="status_quality_inverted" Source="GFX/gradient_red_128.png" Visibility="Visible" Stretch="Fill" Opacity="1" />
+                <Image x:Name="status_quality" Source="GFX/gradient_green_128.png" Visibility="Visible" Stretch="Fill" Opacity="0" />
                 <Image x:Name="status_no_tracking" Source="GFX/trackinglost.png" Visibility="Visible"  />
             </Grid>
             <Canvas Name="Drawing_Canvas" ClipToBounds="true" >

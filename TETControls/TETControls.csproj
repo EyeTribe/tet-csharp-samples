@@ -74,11 +74,13 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Trackbox\GFX\gradient_green_2048.png" />
-    <Resource Include="Trackbox\GFX\gradient_red_2048.png" />
     <Resource Include="Trackbox\GFX\main_bg.png" />
     <Resource Include="Trackbox\GFX\tb_eye_128.png" />
     <Resource Include="Trackbox\GFX\trackinglost.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Trackbox\GFX\gradient_green_128.png" />
+    <Resource Include="Trackbox\GFX\gradient_red_128.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

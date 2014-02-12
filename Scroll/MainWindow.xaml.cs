@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Windows7.Multitouch;
+using Windows7.Multitouch.WPF;
 using TETCSharpClient;
 using TETCSharpClient.Data;
 using MessageBox = System.Windows.MessageBox;
@@ -17,6 +19,7 @@ namespace Scroll
 	{
 		#region Variables
 
+		private const float DPI_DEFAULT = 96f; // default system DIP setting
 		private const double SPEED_BOOST = 20.0;
 		private const double ACTIVE_SCROLL_AREA = 0.25; // 25% top and bottom
 		private const int MAX_IMAGE_WIDTH = 1600;
@@ -30,6 +33,28 @@ namespace Scroll
 
 		#endregion
 
+		#region Get/Set
+
+		private bool IsTouchEnabled { get; set; }
+
+		#endregion
+
+		#region Enums
+
+		public enum DeviceCap
+		{
+			/// <summary>
+			/// Logical pixels inch in X
+			/// </summary>
+			LOGPIXELSX = 88,
+			/// <summary>
+			/// Logical pixels inch in Y
+			/// </summary>
+			LOGPIXELSY = 90
+		}
+
+		#endregion
+
 		#region Constructor
 
 		public MainWindow()
@@ -37,6 +62,7 @@ namespace Scroll
 			var connectedOk = true;
 			GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
 			GazeManager.Instance.AddGazeListener(this);
+			
 			if (!GazeManager.Instance.IsConnected)
 			{
 				Dispatcher.BeginInvoke(new Action(() => MessageBox.Show("EyeTribe Server has not been started")));
@@ -54,14 +80,26 @@ namespace Scroll
 			}
 
 			InitializeComponent();
+
+			// Check if multi-touch capability is available
+			IsTouchEnabled = TouchHandler.DigitizerCapabilities.IsMultiTouchReady;
+			if (IsTouchEnabled)
+			{
+				// register for stylus (touch) events
+				StylusDown += MainWindowStylusDown;
+				StylusUp += MainWindowStylusUp;
+			}
+			else
+			{
+				// Register for mouse clicks (eg. taps) to show/hide panels and enable selection
+				PreviewMouseDown += TapDown;
+				PreviewMouseUp += TapUp;
+			}
+			// Get the current DIP scale
 			dpiScale = CalcDpiScale();
 
 			// Hide all from start
 			PanelsVisibility(Visibility.Collapsed);
-
-			// Register for mouse clicks (eg. taps) to show/hide panels and enable selection
-			PreviewMouseDown += TapDown;
-			PreviewMouseUp += TapUp;
 
 			// Listen for keys
 			KeyDown += ScrollWindowKeyDown;
@@ -80,10 +118,15 @@ namespace Scroll
 					var presentationSource = PresentationSource.FromVisual(this);
 					transfrm = presentationSource.CompositionTarget.TransformFromDevice;
 
+					// enable stylus (touch) events
+					if (IsTouchEnabled)
+						Factory.EnableStylusEvents(this);
+
 					ExecuteSelectedButton("newyorktimes");
 				};
 		}
 
+		
 		#endregion
 
 		#region Public methods
@@ -108,12 +151,33 @@ namespace Scroll
 			canScroll = false;
 		}
 
+		void MainWindowStylusDown(object sender, StylusDownEventArgs e)
+		{
+			DoTapDown();
+		}
+
+		void MainWindowStylusUp(object sender, StylusEventArgs e)
+		{
+			DoTapUp();
+		}
+
 		private void TapDown(object sender, MouseButtonEventArgs e)
+		{
+			DoTapDown();
+		}
+		
+		private void TapUp(object sender, MouseButtonEventArgs e)
+		{
+			DoTapUp();
+		}
+
+
+		private void DoTapDown()
 		{
 			PanelsVisibility(Visibility.Visible);
 		}
 
-		private void TapUp(object sender, MouseButtonEventArgs e)
+		private void DoTapUp()
 		{
 			// Hide panlel and exe button click if needed
 			PanelsVisibility(Visibility.Collapsed);
@@ -266,7 +330,7 @@ namespace Scroll
 
 		private static double CalcDpiScale()
 		{
-			return 96.0/GetSystemDpi().X;
+			return DPI_DEFAULT / GetSystemDpi().X;
 		}
 
 		#endregion
@@ -275,10 +339,10 @@ namespace Scroll
 
 		public static Point GetSystemDpi()
 		{
-			var result = new Point();
-			var hDc = GetDC(IntPtr.Zero);
-			result.X = GetDeviceCaps(hDc, 88);
-			result.Y = GetDeviceCaps(hDc, 90);
+			Point result = new Point();
+			IntPtr hDc = GetDC(IntPtr.Zero);
+			result.X = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSX);
+			result.Y = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSY);
 			ReleaseDC(IntPtr.Zero, hDc);
 			return result;
 		}

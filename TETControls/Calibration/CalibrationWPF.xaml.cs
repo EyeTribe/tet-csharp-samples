@@ -6,7 +6,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using TETCSharpClient.Data;
-using Cursors = System.Windows.Input.Cursors;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -145,7 +144,7 @@ namespace TETControls.Calibration
 			ActiveArea.Width = (int)(Utility.Instance.ScaleDpi * (ActiveArea.Width == 0 ? screen.Bounds.Width : ActiveArea.Width));
 			ActiveArea.Height = (int)(Utility.Instance.ScaleDpi * (ActiveArea.Height == 0 ? screen.Bounds.Height : ActiveArea.Height));
 
-			Mouse.OverrideCursor = Cursors.None;
+			System.Windows.Forms.Cursor.Hide();
 
 			// run the fade-in animation and signal when done
 			Show();
@@ -179,16 +178,15 @@ namespace TETControls.Calibration
 
         private void PlaceCalibrationTarget(Point2D current)
         {
-			var x = (float)Math.Round(Utility.Instance.ScaleDpi * (screen.Bounds.Width * current.X - 1.0), 0);
-			var y = (float)Math.Round(Utility.Instance.ScaleDpi * (screen.Bounds.Height * current.Y - 1.0), 0);
-
+			var x = (float)Math.Round(Utility.Instance.ScaleDpi * current.X, 0);
+			var y = (float)Math.Round(Utility.Instance.ScaleDpi * current.Y, 0);
             Canvas.SetLeft(CalibrationCanvas.Children[0], x);
             Canvas.SetTop(CalibrationCanvas.Children[0], y);
         }
 
 		private void WindowClosed(object sender, EventArgs e)
 		{
-			Mouse.OverrideCursor = Cursors.Arrow;
+			System.Windows.Forms.Cursor.Show();
 		}
 
 		private void MouseDbClick(object sender, MouseEventArgs e)
