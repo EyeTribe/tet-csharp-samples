@@ -1,4 +1,10 @@
-﻿<UserControl x:Class="TETControls.Calibration.CalibrationPointWpf"
+﻿<!-- 
+ * Copyright (c) 2013-present, The Eye Tribe. 
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the LICENSE file in the root directory of this source tree. 
+-->
+<UserControl x:Class="TETControls.Calibration.CalibrationPointWpf"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 

@@ -43,8 +43,17 @@ To build, open solution file in compliant [Visual Studio](http://www.visualstudi
 
 Changelog
 ----
+0.9.35 (2014-05-20)
+
+- Updated license
+- Calibration result null check in the calibration sample
+- Updated C# SDK
+- Fixed stability issue in the calibration runner
+- Calibration aborts if the Tracker is disconnected
+- minor performance improvements
 
 0.9.27 (2014-02-12)
+
 - Restyled and documented hard-coded values for device caps
 - De-normalized calibration targets in calibration runner
 - Setting opacity for the red background image when updating the background in TrackBox
@@ -55,6 +64,7 @@ Changelog
 - Introduced EyeCount enum in the calibration runner for improved readability
 
 0.9.26 (2014-01-30)
+
 - TETControls has been merged into this repository.
 - The Utility class has been pruned
 - Error states of the EyeTribe tracker is printed in the TrackBox
@@ -64,5 +74,6 @@ Changelog
 - A direction enum is used to determine the Scroll direction 
 
 0.9.21 (2013-01-08)
+
 - Initial release
 

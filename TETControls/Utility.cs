@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * Copyright (c) 2013-present, The Eye Tribe. 
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the LICENSE file in the root directory of this source tree. 
+ *
+ */
+using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
@@ -7,37 +14,37 @@ namespace TETControls
 {
     public class Utility
     {
-        #region Variabels 
+        #region Variabels
 
-		private const float DPI_DEFAULT = 96f; // default system DIP setting
+        private const float DPI_DEFAULT = 96f; // default system DIP setting
         private static Utility _instance;
         private Point sysDpi;
         private float scaleDpi;
 
         #endregion
 
-		#region Enums
+        #region Enums
 
-		public enum DeviceCap
-		{
-			/// <summary>
-			/// Logical pixels inch in X
-			/// </summary>
-			LOGPIXELSX = 88,
-			/// <summary>
-			/// Logical pixels inch in Y
-			/// </summary>
-			LOGPIXELSY = 90
-		}  
+        public enum DeviceCap
+        {
+            /// <summary>
+            /// Logical pixels inch in X
+            /// </summary>
+            LOGPIXELSX = 88,
+            /// <summary>
+            /// Logical pixels inch in Y
+            /// </summary>
+            LOGPIXELSY = 90
+        }
 
-		#endregion
+        #endregion
 
-		#region Constructor
+        #region Constructor
 
-		private Utility()
+        private Utility()
         {
             sysDpi = GetSystemDpi();
-			ScaleDpi = DPI_DEFAULT / sysDpi.X;
+            ScaleDpi = DPI_DEFAULT / sysDpi.X;
         }
 
         #endregion
@@ -67,12 +74,12 @@ namespace TETControls
 
         public static Point GetSystemDpi()
         {
-			Point result = new Point();
-			IntPtr hDc = GetDC(IntPtr.Zero);
-			result.X = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSX);
-			result.Y = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSY);
-			ReleaseDC(IntPtr.Zero, hDc);
-			return result;
+            Point result = new Point();
+            IntPtr hDc = GetDC(IntPtr.Zero);
+            result.X = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSX);
+            result.Y = GetDeviceCaps(hDc, (int)DeviceCap.LOGPIXELSY);
+            ReleaseDC(IntPtr.Zero, hDc);
+            return result;
         }
 
         #endregion
