@@ -22,7 +22,7 @@ namespace TETControls.Calibration
 {
     public partial class CalibrationWpf
     {
-        #region Variables & Events
+        #region Variables
 
         private const double FADE_IN_TIME = 2.0; //sec
         private const double FADE_OUT_TIME = 0.5; //sec
@@ -34,9 +34,8 @@ namespace TETControls.Calibration
 
         #region Events
 
-        public delegate void AbortCalibrationHandler();
-        public event AbortCalibrationHandler OnCalibrationAborted;
-        public event CalibrationFadeInFormHandler OnFadeInDone;
+        public event EventHandler OnFadeInDone;
+        public event EventHandler OnAborted;
 
         #endregion
 
@@ -66,6 +65,8 @@ namespace TETControls.Calibration
             {
                 Close();
             };
+
+            this.Cursor = System.Windows.Input.Cursors.None;
         }
 
         #endregion
@@ -151,11 +152,10 @@ namespace TETControls.Calibration
             ActiveArea.Width = (int)(Utility.Instance.ScaleDpi * (ActiveArea.Width == 0 ? screen.Bounds.Width : ActiveArea.Width));
             ActiveArea.Height = (int)(Utility.Instance.ScaleDpi * (ActiveArea.Height == 0 ? screen.Bounds.Height : ActiveArea.Height));
 
-            System.Windows.Forms.Cursor.Hide();
+            Show();
+            Focus();
 
             // run the fade-in animation and signal when done
-            Show();
-
             var anim = new DoubleAnimation(0, TimeSpan.FromSeconds(FADE_IN_TIME))
             {
                 From = 0.0,
@@ -167,9 +167,10 @@ namespace TETControls.Calibration
             {
                 // remove the info message and notify the calibration runner that we are ready to start
                 CalibrationMessage.Visibility = Visibility.Hidden;
+                Focus();
 
                 if (OnFadeInDone != null)
-                    OnFadeInDone(this, new CalibrationFadeInArgs(true));
+                    OnFadeInDone(this, new EventArgs());
             };
 
             BeginAnimation(OpacityProperty, anim);
@@ -191,11 +192,6 @@ namespace TETControls.Calibration
             Canvas.SetTop(CalibrationCanvas.Children[0], y);
         }
 
-        private void WindowClosed(object sender, EventArgs e)
-        {
-            System.Windows.Forms.Cursor.Show();
-        }
-
         private void MouseDbClick(object sender, MouseEventArgs e)
         {
             Abort();
@@ -211,8 +207,8 @@ namespace TETControls.Calibration
         {
             IsAborted = true;
 
-            if (OnCalibrationAborted != null)
-                OnCalibrationAborted();
+            if (OnAborted != null)
+                OnAborted(this, new EventArgs());
         }
 
         #endregion

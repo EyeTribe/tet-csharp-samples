@@ -46,8 +46,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
-    <Reference Include="TETCSharpClient, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="TETCSharpClient">
       <HintPath>..\TETDLLs\TETCSharpClient.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
@@ -103,7 +102,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TETControls\TETControls.csproj">
-      <Project>{E8F5FE05-A82B-47BC-81AC-B5635D8425A6}</Project>
+      <Project>{c93b12c7-9872-47a3-a2db-d92623476fe5}</Project>
       <Name>TETControls</Name>
     </ProjectReference>
   </ItemGroup>

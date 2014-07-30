@@ -8,6 +8,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media;
@@ -15,7 +16,6 @@ using System.Windows.Threading;
 using TETCSharpClient;
 using TETCSharpClient.Data;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
-using MessageBox = System.Windows.MessageBox;
 using Size = System.Drawing.Size;
 
 namespace TETControls.Calibration
@@ -45,7 +45,6 @@ namespace TETControls.Calibration
         private SolidColorBrush colorBackground = new SolidColorBrush(Colors.DarkGray);
         private SolidColorBrush colorPoint = new SolidColorBrush(Colors.White);
 
-        private CalibrationResult calResult;
         private DispatcherTimer timerLatency;
         private DispatcherTimer timerRecording;
         private Queue<Point2D> calibrationPoints;
@@ -54,6 +53,12 @@ namespace TETControls.Calibration
         private bool trackeStateOK = false;
         private bool isAborting = false;
         private bool isAbortedByUser = false;
+
+        #endregion
+
+        #region Events
+
+        public event EventHandler<CalibrationRunnerEventArgs> OnResult;
 
         #endregion
 
@@ -137,6 +142,7 @@ namespace TETControls.Calibration
             this.screen = screen;
             this.calibrationAreaSize = calibrationAreaSize;
             this.pointCount = pointCount;
+
             GazeManager.Instance.AddTrackerStateListener(this);
 
             // Test whether the tracker state allows for a calibration
@@ -147,35 +153,22 @@ namespace TETControls.Calibration
 
         #region Public
 
-        public bool Start()
+        public void Start()
         {
-            // If Tracker is anything but connected - return false
-            if (trackeStateOK != true) return false;
-
-            isAbortedByUser = false;
+            if (trackeStateOK != true)
+            {
+                RaiseResult(CalibrationRunnerResult.Error, "Device is not in a valid state, cannot calibrate.");
+                return;
+            }
 
             try
             {
-                // Blocks until calibration has completed
-                DoCalibrate(out isAbortedByUser);
+                DoCalibrate();
             }
             catch (Exception ex)
-            { }
-
-            if (isAbortedByUser)
             {
-                MessageBox.Show("The calibration was aborted.");
-                return false;
+                RaiseResult(CalibrationRunnerResult.Error, "An errror occured during calibration. Message: " + ex.Message);
             }
-
-            if (calResult == null)
-                return false;
-
-            if (calResult.Result)
-                return true;
-
-            MessageBox.Show("The calibration process failed. Please try again.");
-            return false;
         }
 
         #region Interface Implementation
@@ -187,6 +180,7 @@ namespace TETControls.Calibration
         {
             trackeStateOK = false;
             string errorMessage = "";
+
             switch (trackerState)
             {
                 case GazeManager.TrackerState.TRACKER_CONNECTED:
@@ -206,10 +200,14 @@ namespace TETControls.Calibration
                    break;
             }
 
-            if (trackeStateOK || isAborting) return;
-            AbortCalibration();
-            isAborting = true;
-            MessageBox.Show(errorMessage);
+            if (trackeStateOK || isAborting) 
+                return;
+
+            if (trackeStateOK == false)
+            {
+                // Lost device, abort calib now (raise event)
+                AbortCalibration(errorMessage);
+            }
         }
 
         public void OnCalibrationStarted()
@@ -237,20 +235,21 @@ namespace TETControls.Calibration
 
         public void OnCalibrationResult(CalibrationResult res)
         {
+            // No result?
             if (res == null || res.Calibpoints == null)
             {
+                RaiseResult(CalibrationRunnerResult.Error, "Calibration result is empty.");
                 StopAndClose();
                 return;
             }
 
-            calResult = res;
-
             // Success, check results for poor points (resample)
-            foreach (CalibrationPoint calPoint in calResult.Calibpoints)
+            foreach (CalibrationPoint calPoint in res.Calibpoints)
             {
                 if (calPoint == null || calPoint.Coordinates == null)
                     continue;
 
+                // Tracker tells us to resample this point, enque it
                 if (calPoint.State == CalibrationPoint.STATE_RESAMPLE || calPoint.State == CalibrationPoint.STATE_NO_DATA)
                     calibrationPoints.Enqueue(new Point2D(calPoint.Coordinates.X, calPoint.Coordinates.Y));
             }
@@ -258,17 +257,20 @@ namespace TETControls.Calibration
             // Time to stop?
             if (reSamplingCount++ >= NUM_MAX_CALIBRATION_ATTEMPTS || calibrationPoints.Count >= NUM_MAX_RESAMPLE_POINTS)
             {
-                AbortCalibration();
+                AbortCalibration(CalibrationRunnerResult.Failure, "Unable to calibrate.");
                 return;
             }
 
             // If there is a point enqued for resampling we do that, otherwise we are done
             CurrentPoint = PickNextPoint();
 
-            if(CurrentPoint != null)
-               MoveToPoint(CurrentPoint);
+            if (CurrentPoint != null)
+                MoveToPoint(CurrentPoint);
             else
-               StopAndClose();
+            {
+                RaiseResult(CalibrationRunnerResult.Success, string.Empty, res);
+                StopAndClose();                
+            }
         }
 
         #endregion
@@ -277,10 +279,12 @@ namespace TETControls.Calibration
 
         #region Private
 
-        private void DoCalibrate(out bool userAbort)
+        private void DoCalibrate()
         {
             reSamplingCount = 0;
-            userAbort = false;
+
+            isAborting = false;
+            isAbortedByUser = false;
 
             try
             {
@@ -305,16 +309,25 @@ namespace TETControls.Calibration
                 // Create points, get first in line, draw it and show window
                 calibrationPoints = CreatePointList();
                 CurrentPoint = PickNextPoint();
-
                 calibrationWin.DrawCalibrationPoint(CurrentPoint);
-                calibrationWin.ShowDialog();
-
-                userAbort = calibrationWin.IsAborted;
+                calibrationWin.Show();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Unknown error occured in the calibration,  message: " + ex.Message);
+                RaiseResult(CalibrationRunnerResult.Error, "An error occured in the calibration. Message: " + ex.Message);
             }
+        }
+
+        private void RaiseResult(CalibrationRunnerResult result, string message)
+        {
+            if (OnResult != null)
+                OnResult(this, new CalibrationRunnerEventArgs(result, message));
+        }
+
+        private void RaiseResult(CalibrationRunnerResult result, string message, CalibrationResult calibrationReport)
+        {
+            if (OnResult != null)
+                OnResult(this, new CalibrationRunnerEventArgs(result, message, calibrationReport));
         }
 
         private void CreateCalibrationWin()
@@ -322,10 +335,16 @@ namespace TETControls.Calibration
             if (calibrationWin == null)
             {
                 calibrationWin = new CalibrationWpf(screen);
-                calibrationWin.OnCalibrationAborted += AbortCalibration;
+
+                // Re-raise abort event from window to outside class and stop&close this
+                calibrationWin.OnAborted += delegate
+                {
+                    AbortCalibration("User aborted calibration process.");
+                };
+
+                // window fade-in completed, move to first point
                 calibrationWin.OnFadeInDone += delegate
                 {
-                    // window fade-in completed, move to first point
                     calibrationFormReady = true;
 
                     if (calibrationServiceReady)
@@ -381,23 +400,42 @@ namespace TETControls.Calibration
             timerLatency.Start(); // Will issue PointStart and start timerRecording on tick
         }
 
-        private void AbortCalibration()
+        private void AbortCalibration(string errorMessage)
         {
-            if (isAborting) return; // Only one call is needed
+            AbortCalibration(CalibrationRunnerResult.Abort, errorMessage);
+        }
+
+        private void AbortCalibration(CalibrationRunnerResult type, string errorMessage)
+        {
+            if (isAborting)
+                return; // Only one call is needed
+
+            isAborting = true;
+            isAbortedByUser = true;
             GazeManager.Instance.CalibrationAbort();
+
             StopAndClose();
+
+            RaiseResult(type, errorMessage);
         }
 
         private void StopAndClose()
         {
-            if (timerLatency != null)
-                timerLatency.Stop();
+            if (calibrationWin.Dispatcher.CheckAccess() == false)
+            {
+                calibrationWin.Dispatcher.BeginInvoke(new Action(StopAndClose));
+                return;
+            }
 
-            if (timerRecording != null)
-                timerRecording.Stop();
+            try { if (timerLatency != null) timerLatency.Stop(); } 
+            catch (Exception) { }
 
-            if (calibrationWin != null)
-                calibrationWin.CloseWindow();
+            try { if (timerRecording != null) timerRecording.Stop(); }
+            catch (Exception) { }
+
+            try { if (calibrationWin != null) calibrationWin.CloseWindow(); }
+            catch (Exception) { }
+
         }
 
         #region Targets Logic

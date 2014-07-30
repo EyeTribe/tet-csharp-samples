@@ -18,7 +18,6 @@
         KeyUp="KeyUpDetected"
         AllowsTransparency="True"
         ContentRendered="WindowContentRendered" 
-        Closed="WindowClosed"
         MouseDoubleClick="MouseDbClick"
         Background="Black">
     <Grid>

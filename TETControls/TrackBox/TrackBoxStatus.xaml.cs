@@ -20,7 +20,7 @@ using Size = System.Windows.Size;
 
 namespace TETControls.TrackBox
 {
-    public partial class TrackBoxStatus : IGazeListener, ITrackerStateListener
+    public partial class TrackBoxStatus : IGazeListener, ITrackerStateListener, IConnectionStateListener 
     {
         #region Structs
 
@@ -101,6 +101,7 @@ namespace TETControls.TrackBox
             {
                 GazeManager.Instance.AddGazeListener(this);
                 GazeManager.Instance.AddTrackerStateListener(this);
+                GazeManager.Instance.AddConnectionStateListener(this);
 
                 var size = new Size(Width, Height);
                 if (double.IsNaN(size.Width))
@@ -129,13 +130,35 @@ namespace TETControls.TrackBox
                 RightTransGroup.Children.Add(RightTransScale);
                 RightTransGroup.Children.Add(RightTransTranslation);
 
+                // What is the current state of the listenes
                 OnTrackerStateChanged(GazeManager.Instance.Trackerstate);
+                OnConnectionStateChanged(GazeManager.Instance.IsActivated);
             };
         }
 
         #endregion
 
         #region Public Methods
+
+        public void OnConnectionStateChanged(bool IsActivated)
+        {
+            // The connection state listener detects when the connection to the EyeTribe server changes
+            if (labelDeviceConnected.Dispatcher.Thread != Thread.CurrentThread)
+            {
+                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnConnectionStateChanged(IsActivated)));
+                return;
+            }
+            if (!IsActivated)
+            {
+                gridContent.Visibility = Visibility.Hidden;
+                labelDeviceConnected.Content = "Connection to EyeTribe Server lost";
+            }
+            else
+            {
+                gridContent.Visibility = Visibility.Visible;
+                labelDeviceConnected.Content = "";   
+            }
+        }
 
         public void OnScreenStatesChanged(int screenIndex, int screenResolutionWidth, int screenResolutionHeight, float screenPhysicalWidth, float screenPhysicalHeight)
         { }
@@ -278,8 +301,7 @@ namespace TETControls.TrackBox
 
         private void AnalyzeSamples()
         {
-            lock (Locker)
-            {
+
                 CurrentTrackingQuality = GetStatus();
                 var quality = VisibleEyesCount(CurrentTrackboxObj);
                 if (quality == EyeCount.One || quality == EyeCount.Two)
@@ -305,7 +327,6 @@ namespace TETControls.TrackBox
                         CurrentTrackboxObj = LatestGoodSample;
                     }
                 }
-            }
         }
 
         private double DoEyeSizeDiff()
@@ -318,11 +339,12 @@ namespace TETControls.TrackBox
 
         private void EnqueueTrackBoxObject(TrackBoxObject tbo)
         {
-            TrackBoxHistory.Enqueue(tbo);
             while (TrackBoxHistory.Count > HISTORY_SIZE)
             {
                 TrackBoxHistory.Dequeue();
             }
+
+            TrackBoxHistory.Enqueue(tbo);
         }
 
         private float GetStatus()
@@ -330,11 +352,16 @@ namespace TETControls.TrackBox
             // Get the overall tracking quality from our TrackBoxHistory
             var totalQuality = 0;
             var count = 0;
-            foreach (var item in TrackBoxHistory)
+
+            lock (Locker)
             {
-                totalQuality += (int)VisibleEyesCount(item);
-                count++;
+                foreach (var item in TrackBoxHistory)
+                {
+                    totalQuality += (int) VisibleEyesCount(item);
+                    count++;
+                }
             }
+
             return (totalQuality == (int)EyeCount.Zero ? totalQuality : totalQuality / ((float)EyeCount.Two * count));
         }
 
@@ -354,6 +381,7 @@ namespace TETControls.TrackBox
             // only left or right eye is showing
             return EyeCount.One;
         }
+
         #endregion
     }
 }

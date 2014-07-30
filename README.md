@@ -43,6 +43,12 @@ To build, open solution file in compliant [Visual Studio](http://www.visualstudi
 
 Changelog
 ----
+0.9.40 (2014-07-30)
+
+- Stability improvements for the calibration runner
+- Updated C# SDK
+- Minor performance improvements
+
 0.9.35 (2014-05-20)
 
 - Updated license
@@ -50,7 +56,7 @@ Changelog
 - Updated C# SDK
 - Fixed stability issue in the calibration runner
 - Calibration aborts if the Tracker is disconnected
-- minor performance improvements
+- Minor performance improvements
 
 0.9.27 (2014-02-12)
 
