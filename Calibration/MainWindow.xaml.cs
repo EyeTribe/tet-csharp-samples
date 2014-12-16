@@ -9,108 +9,183 @@ using System;
 using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Input;
 using TETControls.Calibration;
+using TETControls.Cursor;
 using TETControls.TrackBox;
 using TETCSharpClient.Data;
 using System.Windows.Interop;
 using TETCSharpClient;
-
+using MessageBox = System.Windows.MessageBox;
 
 namespace Calibration
 {
     public partial class MainWindow : IConnectionStateListener
     {
+        private Screen activeScreen = Screen.PrimaryScreen;
+        private CursorControl cursorControl;
+
+        private bool isCalibrated;
+
         public MainWindow()
         {
-            ConnectClient();
             InitializeComponent();
-            Loaded += (sender, args) => InitClient();
-        }
-
-        private void ConnectClient()
-        {
-            // Create a client for the eye tracker
-            GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
+            this.ContentRendered += (sender, args) => InitClient();
+            this.KeyDown += MainWindow_KeyDown;
         }
 
         private void InitClient()
         {
-            // Default content of the action button
-            btnAction.Content = "Calibrate";
+            // Activate/connect client
+            GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
+
+            // Listen for changes in connection to server
+            GazeManager.Instance.AddConnectionStateListener(this);
+
+            // Fetch current status
+            OnConnectionStateChanged(GazeManager.Instance.IsActivated);
 
             // Add a fresh instance of the trackbox in case we reinitialize the client connection.
             TrackingStatusGrid.Children.Clear();
             TrackingStatusGrid.Children.Add(new TrackBoxStatus());
 
-            // Add listener if EyeTribe Server is closed
-            GazeManager.Instance.AddConnectionStateListener(this);
+            UpdateState();
+        }
 
-            // What is the current connection state
-            OnConnectionStateChanged(GazeManager.Instance.IsActivated);
+        private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e == null)
+                return;
 
-            if (GazeManager.Instance.IsCalibrated)
+            switch (e.Key)
             {
-                // Get the latest successful calibration from the EyeTribe server
-                RatingText.Text = RatingFunction(GazeManager.Instance.LastCalibrationResult);
-                btnAction.Content = "Re-Calibrate";
+                // Start calibration on hitting "C"
+                case Key.C:
+                    ButtonCalibrateClicked(this, null);
+                    break;
+
+                // Toggle mouse redirect with "M"
+                case Key.M:
+                    ButtonMouseClicked(this, null);
+                    break;
+
+                // Turn cursor control off on hitting Escape
+                case Key.Escape:
+                    if (cursorControl != null)
+                        cursorControl.Enabled = false;
+
+                    UpdateState();
+                    break;
             }
         }
 
-        private void ButtonClicked(object sender, RoutedEventArgs e)
+        public void OnConnectionStateChanged(bool IsActivated)
         {
-            if (GazeManager.Instance.IsActivated)
+            // The connection state listener detects when the connection to the EyeTribe server changes
+            if (btnCalibrate.Dispatcher.Thread != Thread.CurrentThread)
             {
-                Calibrate();
+                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnConnectionStateChanged(IsActivated)));
+                return;
             }
-            else
-            {
-                ConnectClient();
+
+            if (!IsActivated)
+                GazeManager.Instance.Deactivate();
+
+            UpdateState();
+        }
+
+        private void ButtonCalibrateClicked(object sender, RoutedEventArgs e)
+        {
+            // Check connectivitiy status
+            if (GazeManager.Instance.IsActivated == false)
                 InitClient();
-            }
+
+            // API needs to be active to start calibrating
+            if (GazeManager.Instance.IsActivated)
+                Calibrate();
+            else
+                UpdateState(); // show reconnect
+        }
+
+        private void ButtonMouseClicked(object sender, RoutedEventArgs e)
+        {
+            if (GazeManager.Instance.IsCalibrated == false)
+                return;
+
+            if (cursorControl == null)
+                cursorControl = new CursorControl(activeScreen, true, true); // Lazy initialization
+            else
+                cursorControl.Enabled = !cursorControl.Enabled; // Toggle on/off
+
+            UpdateState();
         }
 
         private void Calibrate()
         {
-            btnAction.Content = "Re-Calibrate";
-
-            //Run the calibration on 'this' monitor
-            var ActiveScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
+            // Update screen to calibrate where the window currently is
+            activeScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
 
             // Initialize and start the calibration
-            CalibrationRunner calRunner = new CalibrationRunner(ActiveScreen, ActiveScreen.Bounds.Size, 9);
+            CalibrationRunner calRunner = new CalibrationRunner(activeScreen, activeScreen.Bounds.Size, 9);
             calRunner.OnResult += calRunner_OnResult;
             calRunner.Start();
         }
 
         private void calRunner_OnResult(object sender, CalibrationRunnerEventArgs e)
         {
+            // Invoke on UI thread since we are accessing UI elements
             if (RatingText.Dispatcher.Thread != Thread.CurrentThread)
             {
                 this.Dispatcher.BeginInvoke(new MethodInvoker(() => calRunner_OnResult(sender, e)));
                 return;
             }
 
+            // Show calibration results rating
             if (e.Result == CalibrationRunnerResult.Success)
             {
-                RatingText.Text = RatingFunction(e.CalibrationResult);
+                isCalibrated = true;
+                UpdateState();
+            }
+            else
+                MessageBox.Show(this, "Calibration failed, please try again");
+        }
+
+        private void UpdateState()
+        {
+            // No connection
+            if (GazeManager.Instance.IsActivated == false)
+            {
+                btnCalibrate.Content = "Connect";
+                btnMouse.Content = "";
+                RatingText.Text = "";
+                return;
+            }
+
+            if (GazeManager.Instance.IsCalibrated == false)
+            {
+                btnCalibrate.Content = "Calibrate";
             }
             else
             {
-                System.Windows.MessageBox.Show("Calibration failed, please try again");
+                btnCalibrate.Content = "Recalibrate";
+
+                // Set mouse-button label
+                btnMouse.Content = "Mouse control On";
+
+                if (cursorControl != null && cursorControl.Enabled)
+                    btnMouse.Content = "Mouse control Off";
+
+                if (GazeManager.Instance.LastCalibrationResult != null)
+                    RatingText.Text = RatingFunction(GazeManager.Instance.LastCalibrationResult);
             }
         }
 
-        private void WindowClosed(object sender, EventArgs e)
-        {
-            GazeManager.Instance.Deactivate();
-        }
-
-        public string RatingFunction(CalibrationResult result)
+        private string RatingFunction(CalibrationResult result)
         {
             if (result == null)
                 return "";
 
-            var accuracy = result.AverageErrorDegree;
+            double accuracy = result.AverageErrorDegree;
 
             if (accuracy < 0.5)
                 return "Calibration Quality: PERFECT";
@@ -127,20 +202,9 @@ namespace Calibration
             return "Calibration Quality: REDO";
         }
 
-        public void OnConnectionStateChanged(bool IsActivated)
+        private void WindowClosed(object sender, EventArgs e)
         {
-            // The connection state listener detects when the connection to the EyeTribe server changes
-            if (btnAction.Dispatcher.Thread != Thread.CurrentThread)
-            {
-                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnConnectionStateChanged(IsActivated)));
-                return;
-            }
-            if (!IsActivated)
-            {
-                GazeManager.Instance.Deactivate();
-                RatingText.Text = "";
-                btnAction.Content = "Re-Connect";
-            }
+            GazeManager.Instance.Deactivate();
         }
     }
 }

@@ -17,11 +17,11 @@ namespace TETControls.Calibration
         #region Variables
 
         private Storyboard _sb;
-        private const double PctTarget = 0.07;
-        private int animationTimeMs = 1000;
+        private const double PctTarget = 0.03;
+        private int animationTimeMs = 333;
         private int animationDurationMs;
-        private int pulseCount = 1;
-        private double minScale = 0.5;
+        private int pulseCount = 2;
+        private double minScale = 0.2;
         private double maxScale = 1;
         private int currentPulseCount;
 
@@ -83,7 +83,7 @@ namespace TETControls.Calibration
             // set the size of the calibration target
             var monitorSize = screenSize;
             var targetSize = monitorSize.Height * PctTarget;
-            var scaleToFit = targetSize / TargetCenter.Width;
+            var scaleToFit = targetSize / TargetBackground.Width;
             Target.Margin = new Thickness(-targetSize / 2, -targetSize / 2, 0.0, 0.0);
 
             var trScl = new ScaleTransform(scaleToFit, scaleToFit);

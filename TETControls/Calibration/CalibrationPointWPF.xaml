@@ -14,8 +14,9 @@
              Height="Auto" Width="Auto">
 
     <Grid x:Name="Target" Margin="0,0,0,0">
-        <Ellipse x:Name="TargetCenter" Width="50" Height="50" Fill="White" Stroke="#888888" RenderTransformOrigin="0.5,0.5" StrokeThickness="2" />
-        <Ellipse x:Name="TargetCenterBlackDot" Width="7" Height="7" Fill="#333333"  />
-        <Ellipse x:Name="TargetCenterDot" Width="3" Height="3" Fill="White"  />
+        <Ellipse x:Name="TargetBackground" Width="40" Height="40" Fill="Black"  />
+        <Ellipse x:Name="TargetCenter" Width="13" Height="13" RenderTransformOrigin="0.5,0.5" StrokeThickness="2" Panel.ZIndex="1" Fill="#FF383838" Stroke="Black" />
+        <Rectangle Fill="White" Height="8" Margin="0" VerticalAlignment="Center"/>
+        <Rectangle Fill="White" HorizontalAlignment="Center" Margin="0" Width="8"/>
     </Grid>
 </UserControl>

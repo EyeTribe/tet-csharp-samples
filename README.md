@@ -43,6 +43,16 @@ To build, open solution file in compliant [Visual Studio](http://www.visualstudi
 
 Changelog
 ----
+0.9.49 (2014-12-16)
+
+- CalibrationSample introduces RefreshAPIConnection public method that helps to refresh listeners when the server has been manually restarted
+- Simplified the calibration runner
+- Fixed potential threading issue in trackbox control
+- Trackbox sample queue is dependent on framerate
+- Soved UI-update issue when closing Scroll sample  
+- Updated C# SDK
+- Minor performance improvements
+
 0.9.40 (2014-07-30)
 
 - Stability improvements for the calibration runner

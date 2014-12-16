@@ -25,10 +25,10 @@
                     <ControlTemplate TargetType="{x:Type Scroll:ImageButton}">
                         <Grid Margin="5,5,5,5">
                             <Image x:Name="VisibleIcon"
-								Source="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Icon}" 
-								Stretch="Fill"
-								Width="100"
-								Height="100"/>
+                                Source="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Icon}" 
+                                Stretch="Fill"
+                                Width="100"
+                                Height="100"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">

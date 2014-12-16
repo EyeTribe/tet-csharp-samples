@@ -115,22 +115,22 @@ namespace Scroll
             scrollTimer.Tick += ScrollTimerTick;
 
             Loaded += (sender, args) =>
-                {
-                    if (Screen.PrimaryScreen.Bounds.Width > MAX_IMAGE_WIDTH)
-                        WebImage.Width = MAX_IMAGE_WIDTH * dpiScale;
-                    else
-                        WebImage.Width = Screen.PrimaryScreen.Bounds.Width * dpiScale;
+            {
+                if (Screen.PrimaryScreen.Bounds.Width > MAX_IMAGE_WIDTH)
+                    WebImage.Width = MAX_IMAGE_WIDTH * dpiScale;
+                else
+                    WebImage.Width = Screen.PrimaryScreen.Bounds.Width * dpiScale;
 
-                    // Transformation matrix that accomodate for the DPI settings
-                    var presentationSource = PresentationSource.FromVisual(this);
-                    transfrm = presentationSource.CompositionTarget.TransformFromDevice;
+                // Transformation matrix that accomodate for the DPI settings
+                var presentationSource = PresentationSource.FromVisual(this);
+                transfrm = presentationSource.CompositionTarget.TransformFromDevice;
 
-                    // enable stylus (touch) events
-                    if (IsTouchEnabled)
-                        Factory.EnableStylusEvents(this);
+                // enable stylus (touch) events
+                if (IsTouchEnabled)
+                    Factory.EnableStylusEvents(this);
 
-                    ExecuteSelectedButton("newyorktimes");
-                };
+                ExecuteSelectedButton("newyorktimes");
+            };
         }
 
 
@@ -180,14 +180,15 @@ namespace Scroll
 
         private void WindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == Key.VolumeDown || e.Key == Key.VolumeUp || e.Key == Key.Escape)
-                Close();
             DoTapDown();
         }
 
         private void WindowKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            DoTapUp();
+            if (e.Key == Key.VolumeDown || e.Key == Key.VolumeUp || e.Key == Key.Escape)
+                Close();
+            else
+                DoTapUp();
         }
 
         private void DoTapDown()
@@ -326,9 +327,20 @@ namespace Scroll
             }
         }
 
-        private static void CleanUp()
+        private void CleanUp()
         {
             GazeManager.Instance.Deactivate();
+            scrollTimer.Stop();
+            // De-register events
+            if (IsTouchEnabled)
+            {
+                StylusDown -= MainWindowStylusDown;
+                StylusUp -= MainWindowStylusUp;
+            }
+            PreviewMouseDown -= TapDown;
+            PreviewMouseUp -= TapUp;
+            KeyDown -= WindowKeyDown;
+            KeyUp -= WindowKeyUp;
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)

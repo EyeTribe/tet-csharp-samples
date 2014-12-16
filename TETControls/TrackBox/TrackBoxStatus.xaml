@@ -11,21 +11,41 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	mc:Ignorable="d"
 	d:DesignWidth="1200" d:DesignHeight="1000">
-    <Grid x:Name="LayoutRoot">
-        <Image x:Name="GridImageBackground" Source="GFX/main_bg.png" Visibility="Visible" Stretch="Fill" />
-        <Label x:Name="labelDeviceConnected" Foreground="White" FontSize="13"  Width="Auto" Height="Auto" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
-        <Grid x:Name="gridContent">
+    <Grid x:Name="LayoutRoot">
+
+        <Image x:Name="GridImageBackground" Source="GFX/main_bg.png" Visibility="Visible" Stretch="Fill" />
+
+        <Grid x:Name="GridContent">
             <Grid x:Name="GridImages">
-                <Image x:Name="status_quality_inverted" Source="GFX/gradient_red_128.png" Visibility="Visible" Stretch="Fill" Opacity="1" />
-                <Image x:Name="status_quality" Source="GFX/gradient_green_128.png" Visibility="Visible" Stretch="Fill" Opacity="0" />
-                <Image x:Name="status_no_tracking" Source="GFX/trackinglost.png" Visibility="Visible"  />
+                <Image x:Name="StatusQualityInverted" Source="GFX/gradient_red_128.png" Visibility="Visible" Stretch="Fill" Opacity="1" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Image x:Name="StatusQuality" Source="GFX/gradient_green_128.png" Visibility="Visible" Stretch="Fill" Opacity="0" RenderOptions.BitmapScalingMode="HighQuality" />
+                <Image x:Name="StatusNoTracking" Source="GFX/trackinglost.png" Visibility="Visible" RenderOptions.BitmapScalingMode="HighQuality" />
             </Grid>
-            <Canvas Name="Drawing_Canvas" ClipToBounds="true" >
-                <Image x:Name="eye_right" Source="GFX/tb_eye_128.png" ClipToBounds="True" Visibility="Collapsed" RenderTransformOrigin="0.5, 0.5" />
-                <Image x:Name="eye_left" Source="GFX/tb_eye_128.png" ClipToBounds="True" Visibility="Collapsed" RenderTransformOrigin="0.5, 0.5" />
+
+            <Canvas Name="DrawingCanvas" ClipToBounds="true" >
+                <Image x:Name="EyeRight" Source="GFX/tb_eye_128.png" ClipToBounds="True" Visibility="Collapsed" RenderTransformOrigin="0.5, 0.5" RenderOptions.BitmapScalingMode="HighQuality">
+                    <Image.RenderTransform>
+                        <TransformGroup x:Name="TransformEyeRight">
+                            <RotateTransform />
+                            <ScaleTransform />
+                            <TranslateTransform />
+                        </TransformGroup>
+                    </Image.RenderTransform>
+                </Image>
+                <Image x:Name="EyeLeft" Source="GFX/tb_eye_128.png" ClipToBounds="True" Visibility="Collapsed" RenderTransformOrigin="0.5, 0.5" RenderOptions.BitmapScalingMode="HighQuality">
+                    <Image.RenderTransform>
+                        <TransformGroup x:Name="TransformEyeLeft">
+                            <RotateTransform />
+                            <ScaleTransform />
+                            <TranslateTransform />
+                        </TransformGroup>
+                    </Image.RenderTransform>
+                </Image>
             </Canvas>
         </Grid>
+
+        <Label x:Name="LabelDeviceConnected" Foreground="White" FontSize="13"  Width="Auto" Height="Auto" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
     </Grid>
 </UserControl>

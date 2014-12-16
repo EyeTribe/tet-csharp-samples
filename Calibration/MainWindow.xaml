@@ -7,21 +7,22 @@
 <Window x:Class="Calibration.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="The Eye Tribe BasicUI"
+        Title="Eye Tribe Calibration"
         Height="340" 
         Width="310" 
         Closed="WindowClosed" 
         WindowStartupLocation="CenterScreen" 
         Background="Black"
         Icon="favicon.ico">
-    
+
     <Grid>
         <Grid x:Name="TrackingStatusGrid" Width="300" Height="250" Margin="4" HorizontalAlignment="Center" VerticalAlignment="Top" />
-        
+
         <Grid x:Name="ButtonControls" VerticalAlignment="Bottom">
-            <Button x:Name="btnAction" Content="Calibrate" Click="ButtonClicked" Height="35" Margin="10" VerticalAlignment="Bottom" Background="#FF575757" Foreground="White" />
+            <Button x:Name="btnCalibrate" Content="" Click="ButtonCalibrateClicked" Height="35" Margin="10,0,159,10" VerticalAlignment="Bottom" Background="#FF575757" Foreground="White" Focusable="False" />
+            <Button x:Name="btnMouse" Content="" Click="ButtonMouseClicked" Height="35" Margin="158,0,10,10" VerticalAlignment="Bottom" Background="#FF575757" Foreground="White" Focusable="False"/>
         </Grid>
-        
+
         <TextBlock x:Name="RatingText" HorizontalAlignment="Center" Text="" VerticalAlignment="Top" Foreground="White" FontSize="15" TextAlignment="Right" TextWrapping="Wrap" FontWeight="Bold" />
     </Grid>
 </Window>

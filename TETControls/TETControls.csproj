@@ -48,10 +48,9 @@
     <Compile Include="Calibration\CalibrationPointWPF.xaml.cs">
       <DependentUpon>CalibrationPointWPF.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Calibration\CalibrationRunner.cs" />
     <Compile Include="Calibration\CalibrationRunnerEventArgs.cs" />
-    <Compile Include="Calibration\CalibrationWPF.xaml.cs">
-      <DependentUpon>CalibrationWPF.xaml</DependentUpon>
+    <Compile Include="Calibration\CalibrationRunner.xaml.cs">
+      <DependentUpon>CalibrationRunner.xaml</DependentUpon>
     </Compile>
     <Compile Include="Cursor\CursorControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -65,7 +64,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Calibration\CalibrationWPF.xaml">
+    <Page Include="Calibration\CalibrationRunner.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
