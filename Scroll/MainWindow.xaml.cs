@@ -16,8 +16,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Windows7.Multitouch;
 using Windows7.Multitouch.WPF;
-using TETCSharpClient;
-using TETCSharpClient.Data;
+using EyeTribe.ClientSdk;
+using EyeTribe.ClientSdk.Data;
 using MessageBox = System.Windows.MessageBox;
 
 namespace Scroll

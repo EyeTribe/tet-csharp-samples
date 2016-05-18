@@ -10,12 +10,12 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
-using TETControls.Calibration;
-using TETControls.Cursor;
-using TETControls.TrackBox;
-using TETCSharpClient.Data;
+using EyeTribe.Controls.Calibration;
+using EyeTribe.Controls.Cursor;
+using EyeTribe.Controls.TrackBox;
+using EyeTribe.ClientSdk.Data;
 using System.Windows.Interop;
-using TETCSharpClient;
+using EyeTribe.ClientSdk;
 using MessageBox = System.Windows.MessageBox;
 
 namespace Calibration
