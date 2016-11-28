@@ -40,15 +40,17 @@
     <ApplicationIcon>Browser.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EyeTribe.ClientSdk">
-      <HintPath>$(SolutionDir)packages\EyeTribe.ClientSdk.0.9.77\lib\net45\EyeTribe.ClientSdk.dll</HintPath>
+    <Reference Include="EyeTribe.ClientSdk, Version=0.9.77.30231, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>$(SolutionDir)packages\EyeTribe.ClientSdk.0.9.77.6\lib\net45\EyeTribe.ClientSdk.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="EyeTribe.Controls">
-      <HintPath>$(SolutionDir)packages\EyeTribe.Controls.0.9.77\lib\net45\EyeTribe.Controls.dll</HintPath>
+    <Reference Include="EyeTribe.Controls, Version=0.9.77.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>$(SolutionDir)packages\EyeTribe.Controls.0.9.77.2\lib\net45\EyeTribe.Controls.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SolutionDir)packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>$(SolutionDir)packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
@@ -143,3 +145,4 @@
   </Target>
   -->
 </Project>
+
