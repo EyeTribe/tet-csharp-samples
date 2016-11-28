@@ -1,6 +1,12 @@
 # Change Log #
 ---
 
+0.9.77.1 (2016-11-28)
+---
+- Updated C# SDK
+- Updated JSON
+- Fixed minor issue in Scroll demo where the aplication would crash if server was not running
+
 0.9.77 (2016-05-18)
 ---
 - Removing embedded dependencies, using NuGet for 'EyeTribe WPF Tools' instead

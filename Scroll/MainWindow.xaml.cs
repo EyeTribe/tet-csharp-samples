@@ -36,6 +36,7 @@ namespace Scroll
         private readonly Timer scrollTimer;
         private double scrollLevel;
         private bool canScroll;
+        private bool connectedOk = true;
         enum Direction { Up = -1, Down = 1 }
 
         #endregion
@@ -66,7 +67,6 @@ namespace Scroll
 
         public MainWindow()
         {
-            var connectedOk = true;
             GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
             GazeManager.Instance.AddGazeListener(this);
 
@@ -345,7 +345,8 @@ namespace Scroll
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            CleanUp();
+            if (connectedOk)
+                CleanUp();
             base.OnClosing(e);
         }
 
